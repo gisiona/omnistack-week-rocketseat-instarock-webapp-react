@@ -1,13 +1,14 @@
 import React , { Component } from 'react';
-import api from '../services/api';
+import io from 'socket.io-client';
 
+import api from '../services/api';
 import '../pages/Feed.css';
 
 import more from '../assets/more.svg'
 import like from '../assets/like.svg'
 import comment from '../assets/comment.svg'
 import send from '../assets/send.svg'
-import image from '../assets/image.jpg'
+
 
 
 
@@ -18,12 +19,38 @@ class Feed extends Component{
     };
 
    async componentDidMount(){
+       this.registerToSocket();
+
         const response = await api.get('posts');
         
         this.setState({feed: response.data.posts });
         console.log(this.state.feed );
     }
 
+
+    registerToSocket = () => {
+        const socket = io('http://localhost:3001/');
+        
+        // ouvir as chaves configuradas no back-end (post e like)
+        socket.on('post', newPost => {
+            this.setState({feed: [newPost], ... this.state.feed })
+        });
+
+
+        socket.on('like', newLike => {
+            this.setState({
+                feed: this.state.feed.map(post => 
+                                            post._id === newLike._id ? newLike : post )
+            })
+        });
+    }
+
+
+    handleLike = id => {
+        const data = api.post(`/posts/${id}/like`);
+        console.log(data);
+
+    }
 
     render(){
         return (
@@ -43,12 +70,15 @@ class Feed extends Component{
 
                     <footer>
                         <div className="actions">
-                            <img src={like} alt="" />
+                            <button type="button" onClick={() => this.handleLike(post._id) }>
+                                <img src={like} alt="" />
+                            </button>
+                            
                             <img src={comment} alt="" />
                             <img src={send} alt="" />
                         </div>
 
-                        <strong> { post.like } </strong>
+                        <strong> { post.likes } curtidas</strong>
 
                         <p>
                            {post.description }
